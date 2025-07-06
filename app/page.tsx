@@ -1,97 +1,91 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Camera, Heart, MessageCircle } from 'lucide-react'
+import { Camera, Heart, MessageCircle } from 'lucide-react'
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen">
-      <header className="bg-white border-b py-4">
-        <div className="container mx-auto px-4 text-center">
-          <div className="relative w-60 h-60 mx-auto">
-            <Image
-              src="/logo.png"
-              alt="Benji Logo"
-              fill
-              className="object-contain"
-              priority
+    <div className="min-h-screen bg-white text-gray-800 flex flex-col">
+      {/* Hero Section */}
+      <section className="relative w-full h-[75vh] flex items-center justify-center overflow-hidden">
+        <Image
+          src="/benji-hero.jpeg"
+          alt="Benji Hero"
+          fill
+          className="object-cover absolute inset-0 z-0"
+          priority
+        />
+        <div className="z-10 text-center px-4">
+          <h1 className="text-3xl sm:text-4xl font-bold text-white drop-shadow-md">
+            Benji’s Growth Journal
+          </h1>
+          <p className="text-white text-base sm:text-lg mt-3 drop-shadow-sm max-w-md mx-auto">
+            A place to celebrate every smile, step, and memory.
+          </p>
+          <Button asChild className="mt-5">
+            <Link href="/gallery">Explore Memories</Link>
+          </Button>
+        </div>
+        <div className="absolute inset-0 bg-black/30 z-0" />
+      </section>
+
+      {/* Highlights Section */}
+      <section className="py-12 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 text-center">
+            <HighlightCard
+              icon={<Camera className="h-7 w-7 text-indigo-600 mx-auto mb-3" />}
+              title="Upload"
+              description="Capture & share milestones"
+              href="/upload"
+            />
+            <HighlightCard
+              icon={<Heart className="h-7 w-7 text-pink-500 mx-auto mb-3" />}
+              title="Gallery"
+              description="Relive Benji’s journey"
+              href="/gallery"
+            />
+            <HighlightCard
+              icon={
+                <MessageCircle className="h-7 w-7 text-teal-600 mx-auto mb-3" />
+              }
+              title="Messages"
+              description="Send your love & wishes"
+              href="/messages"
             />
           </div>
         </div>
-      </header>
+      </section>
 
-      <main className="flex-1 container mx-auto px-4 py-12 pt-8">
-        <div className="max-w-4xl mx-auto text-center space-y-10">
-          <div className="space-y-4">
-            <h2 className="text-4xl font-serif">Share Your Memories</h2>
-            <p className="text-xl text-muted-foreground">
-              Capture every beautiful memory with Benji
-            </p>
-          </div>
-
-          <div className="grid gap-8 md:grid-cols-3">
-            <div className="bg-muted/50 rounded-lg p-8 flex flex-col items-center space-y-4 shadow-sm hover:shadow-md transition-shadow">
-              <div className="bg-primary/10 p-4 rounded-full">
-                <Camera className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-xl font-medium">Upload Media</h3>
-              <p className="text-muted-foreground text-center">
-                Share your favorite moments from our special day
-              </p>
-              <Button asChild className="mt-4 w-full sm:w-auto">
-                <Link href="/upload">
-                  Upload Media <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-
-            <div className="bg-muted/50 rounded-lg p-8 flex flex-col items-center space-y-4 shadow-sm hover:shadow-md transition-shadow">
-              <div className="bg-primary/10 p-4 rounded-full">
-                <Heart className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-xl font-medium">View Gallery</h3>
-              <p className="text-muted-foreground text-center">
-                Watch Benji grow — one precious moment at a time. These memories
-                capture the love and wonder of his journey
-              </p>
-              <Button
-                asChild
-                variant="outline"
-                className="mt-4 w-full sm:w-auto"
-              >
-                <Link href="/gallery">
-                  View Gallery <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-
-            <div className="bg-muted/50 rounded-lg p-8 flex flex-col items-center space-y-4 shadow-sm hover:shadow-md transition-shadow">
-              <div className="bg-primary/10 p-4 rounded-full">
-                <MessageCircle className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-xl font-medium">Message Board</h3>
-              <p className="text-muted-foreground text-center">
-                Read notes and wishes from friends and family
-              </p>
-              <Button
-                asChild
-                variant="secondary"
-                className="mt-4 w-full sm:w-auto"
-              >
-                <Link href="/messages">
-                  View Messages <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      <footer className="bg-muted py-8">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-muted-foreground">Benji — July 06, 2025</p>
-        </div>
+      {/* Footer */}
+      <footer className="bg-white text-center py-6 border-t">
+        <p className="text-xs text-muted-foreground">
+          Made with love for Benji — Born July 6th, 2025
+        </p>
       </footer>
+    </div>
+  )
+}
+
+function HighlightCard({
+  icon,
+  title,
+  description,
+  href,
+}: {
+  icon: React.ReactNode
+  title: string
+  description: string
+  href: string
+}) {
+  return (
+    <div className="bg-white shadow rounded-lg p-5 hover:shadow-md transition">
+      {icon}
+      <h3 className="text-lg font-medium">{title}</h3>
+      <p className="text-sm text-muted-foreground mt-1 mb-3">{description}</p>
+      <Button asChild variant="outline" size="sm">
+        <Link href={href}>Go</Link>
+      </Button>
     </div>
   )
 }
