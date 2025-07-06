@@ -60,7 +60,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="bg-white text-center py-6 border-t">
         <p className="text-xs text-muted-foreground">
-          Made with love for Benji — Born July 6th, 2025
+          Made with love for Benji — Born June 28th, 2023
         </p>
       </footer>
     </div>
