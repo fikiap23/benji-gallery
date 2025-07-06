@@ -37,7 +37,7 @@ export default async function GalleryPage({
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-serif">Benji Gallery</h1>
+              <h1 className="text-2xl font-serif">Benji's Gallery</h1>
               <p className="text-sm text-muted-foreground">
                 Memories from our special day
               </p>
