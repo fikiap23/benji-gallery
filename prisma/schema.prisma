@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Media {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  url       String
+  name      String
+  type      String   @default("image")
+  fileType  String?
+  thumbnail String?
+  size      Int?
+  duration  Int?
+  likes     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model Email {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+}
+
+model Message {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  content   String
+  name      String
+  createdAt DateTime @default(now())
+}
