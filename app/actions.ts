@@ -81,3 +81,59 @@ export async function toggleLikePhoto(mediaId: string): Promise<{
     return { success: false, likes: 0, error: 'Failed to like media' }
   }
 }
+
+export async function deleteFileFromUploadThing(key: string): Promise<boolean> {
+  try {
+    const res = await fetch('https://api.uploadthing.com/v6/deleteFiles', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Uploadthing-Api-Key': process.env.UPLOADTHING_SECRET!,
+      },
+      body: JSON.stringify({
+        fileKeys: [key],
+      }),
+    })
+
+    const data = await res.json()
+
+    if (!res.ok || !data.success) {
+      console.error('Failed to delete file from UploadThing:', data)
+      return false
+    }
+
+    return true
+  } catch (err) {
+    console.error('Error deleting from UploadThing:', err)
+    return false
+  }
+}
+
+export async function deleteMedia(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const media = await db.media.findUnique({
+      where: { id },
+    })
+
+    if (!media) return { success: false, error: 'Media not found' }
+
+    let deletedFromUT = true
+    if (media.uploadthingKey) {
+      deletedFromUT = await deleteFileFromUploadThing(media.uploadthingKey)
+    }
+
+    if (!deletedFromUT)
+      return { success: false, error: 'Failed to delete from UploadThing' }
+
+    await db.media.delete({ where: { id } })
+
+    revalidatePath('/gallery')
+
+    return { success: true }
+  } catch (err) {
+    console.error('Delete media error:', err)
+    return { success: false, error: 'Failed to delete media' }
+  }
+}

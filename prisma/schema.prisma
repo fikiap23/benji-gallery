@@ -17,16 +17,17 @@ model User {
 }
 
 model Media {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  url       String
-  name      String
-  type      String   @default("image")
-  fileType  String?
-  thumbnail String?
-  size      Int?
-  duration  Int?
-  likes     Int      @default(0)
-  createdAt DateTime @default(now())
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  url            String
+  name           String
+  type           String   @default("image")
+  fileType       String?
+  thumbnail      String?
+  size           Int?
+  duration       Int?
+  likes          Int      @default(0)
+  uploadthingKey String?
+  createdAt      DateTime @default(now())
 }
 
 model Email {
