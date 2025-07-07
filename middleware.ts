@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
-
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
-
-function getSecretKey() {
-  return new TextEncoder().encode(JWT_SECRET)
-}
+import { getSecretKey } from './lib/jwt'
 
 export async function middleware(req: NextRequest) {
   const token = req.cookies.get('token')?.value

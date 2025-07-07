@@ -1,8 +1,11 @@
 'use server'
 
 import { db } from '@/lib/db'
-import type { Message, Media } from '@/lib/types'
+import { getSecretKey } from '@/lib/jwt'
+import type { Message } from '@/lib/types'
+import { jwtVerify } from 'jose'
 import { revalidatePath } from 'next/cache'
+import { cookies } from 'next/headers'
 
 export async function saveEmail(data: { name: string; email: string }) {
   try {
@@ -136,4 +139,48 @@ export async function deleteMedia(
     console.error('Delete media error:', err)
     return { success: false, error: 'Failed to delete media' }
   }
+}
+
+export async function createComment({
+  content,
+  mediaId,
+}: {
+  content: string
+  mediaId: string
+}) {
+  if (!content || !mediaId) {
+    throw new Error('Missing fields')
+  }
+
+  const cookieStore = cookies()
+  const token = cookieStore.get('token')?.value
+  console.log('token', token)
+
+  let userId: string = ''
+  if (token) {
+    try {
+      const { payload } = await jwtVerify(token, getSecretKey())
+      userId = (payload as any).userId
+    } catch (e) {
+      throw new Error('Invalid token')
+    }
+  }
+
+  const user = await db.user.findUnique({ where: { id: userId } })
+  if (!user) {
+    throw new Error('User not found')
+  }
+
+  const comment = await db.comment.create({
+    data: {
+      content,
+      name: user.name,
+      mediaId,
+      userId: userId || null,
+    },
+  })
+
+  // revalidatePath('/media')
+
+  return comment
 }

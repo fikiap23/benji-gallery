@@ -1,3 +1,5 @@
+import { Comment } from '@prisma/client'
+
 export interface Media {
   id: string
   url: string
@@ -9,6 +11,7 @@ export interface Media {
   duration?: number
   likes: number
   createdAt: Date
+  comment?: Comment[]
 }
 
 // Keep Photo type for backwards compatibility
@@ -27,4 +30,3 @@ export interface Message {
   name: string
   createdAt: Date
 }
-

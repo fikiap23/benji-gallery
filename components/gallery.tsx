@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import Image from 'next/image'
-import { Camera, Heart, Play } from 'lucide-react'
-import { deleteMedia, toggleLikePhoto } from '@/app/actions'
+import { Camera, Heart, Play, User } from 'lucide-react'
+import { createComment, deleteMedia, toggleLikePhoto } from '@/app/actions'
 import { cn, generateVideoThumbnail } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
@@ -30,6 +30,8 @@ export function Gallery({ media }: GalleryProps) {
   const [videoThumbnails, setVideoThumbnails] = useState<
     Record<string, string>
   >({})
+  const [comment, setComment] = useState('')
+  const [isPending, startTransition] = useTransition()
 
   // Load user liked photos from localStorage
   useEffect(() => {
@@ -204,6 +206,33 @@ export function Gallery({ media }: GalleryProps) {
     }
   }
 
+  const handleSubmitComment = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!comment.trim()) return
+
+    startTransition(async () => {
+      try {
+        const newComment = await createComment({
+          content: comment,
+          mediaId: selectedPhoto?.id || '',
+        })
+
+        setComment('')
+
+        setSelectedPhoto((prev) =>
+          prev
+            ? {
+                ...prev,
+                comment: [...(prev.comment || []), newComment],
+              }
+            : prev
+        )
+      } catch (error) {
+        console.error('Failed to submit comment', error)
+      }
+    })
+  }
+
   if (media.length === 0) {
     return (
       <div className="text-center py-12">
@@ -317,35 +346,60 @@ export function Gallery({ media }: GalleryProps) {
         ))}
       </div>
 
+      {/* Modal Detail */}
       <Dialog
         open={selectedPhoto !== null}
         onOpenChange={(open) => !open && setSelectedPhoto(null)}
       >
-        <DialogContent className="max-w-4xl w-[90vw]">
+        <DialogContent className="max-w-5xl w-full p-6 bg-background rounded-2xl shadow-2xl space-y-6">
           {selectedPhoto && (
             <>
-              <DialogHeader>
-                <div className="flex items-center justify-between pr-8">
-                  <div className="flex items-center gap-2">
-                    <DialogTitle>{selectedPhoto.name}</DialogTitle>
-                    <div className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <Camera className="h-3 w-3" />
+              {/* Header */}
+              <DialogHeader className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <DialogTitle className="text-xl font-semibold">
+                      {selectedPhoto.name}
+                    </DialogTitle>
+                    <div className="flex items-center gap-1 bg-muted text-xs text-muted-foreground px-2 py-1 rounded-full">
+                      <Camera className="w-4 h-4" />
                       <span>Photographer</span>
                     </div>
                   </div>
+                  <DialogDescription className="text-sm text-muted-foreground">
+                    {new Date(selectedPhoto.createdAt).toLocaleDateString()}
+                  </DialogDescription>
+                </div>
+              </DialogHeader>
+
+              {/* Media */}
+              <div className="w-full rounded-xl overflow-hidden bg-muted relative flex items-center justify-center max-h-[60vh]">
+                {selectedPhoto.type === 'video' ? (
+                  <VideoPlayer
+                    src={selectedPhoto.url}
+                    poster={selectedPhoto.thumbnail}
+                  />
+                ) : (
+                  <Image
+                    src={selectedPhoto.url}
+                    alt={`Photo by ${selectedPhoto.name}`}
+                    width={1200}
+                    height={800}
+                    className="w-full h-auto max-h-[60vh] rounded-md object-cover"
+                    onError={() => toast.error('Failed to load photo')}
+                  />
+                )}
+              </div>
+
+              {/* Likes & Comments */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-4 border-b pb-3">
                   <button
-                    onClick={() =>
-                      selectedPhoto && handleLikePhoto(selectedPhoto.id)
-                    }
+                    onClick={() => handleLikePhoto(selectedPhoto.id)}
                     className={cn(
-                      'flex items-center gap-1.5 text-sm',
+                      'flex items-center gap-2 text-sm font-medium transition-colors',
                       userLikedPhotos.has(selectedPhoto.id) && 'cursor-default'
                     )}
-                    aria-label={
-                      userLikedPhotos.has(selectedPhoto.id)
-                        ? 'Already liked'
-                        : 'Like photo'
-                    }
                     disabled={userLikedPhotos.has(selectedPhoto.id)}
                   >
                     <Heart
@@ -358,33 +412,53 @@ export function Gallery({ media }: GalleryProps) {
                           : 'text-muted-foreground'
                       )}
                     />
-                    <span className="text-muted-foreground">
+                    <span>
                       {likedPhotos[selectedPhoto.id] !== undefined
                         ? likedPhotos[selectedPhoto.id]
-                        : selectedPhoto.likes}
+                        : selectedPhoto.likes}{' '}
+                      Likes
                     </span>
                   </button>
-                </div>
-                <DialogDescription>
-                  {new Date(selectedPhoto.createdAt).toLocaleDateString()}
-                </DialogDescription>
-              </DialogHeader>
 
-              <div className="relative w-full aspect-square md:aspect-video bg-muted rounded-md overflow-hidden">
-                {selectedPhoto.type === 'video' ? (
-                  <VideoPlayer
-                    src={selectedPhoto.url}
-                    poster={selectedPhoto.thumbnail}
+                  <span className="text-sm text-muted-foreground">
+                    {selectedPhoto.comment?.length || 0} Comments
+                  </span>
+                </div>
+
+                {/* Comment List */}
+                <div className="space-y-2 max-h-[200px] overflow-y-auto px-1">
+                  {selectedPhoto.comment?.map((comment) => (
+                    <div key={comment.id} className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 bg-muted text-xs text-muted-foreground px-2 py-1 rounded-full">
+                        <User className="w-4 h-4" />
+                        <span>{comment.name}</span>
+                      </div>
+                      <span className="text-sm">{comment.content}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* New Comment Input */}
+                <form
+                  onSubmit={handleSubmitComment}
+                  className="flex items-center gap-2 mt-2"
+                >
+                  <input
+                    type="text"
+                    name="comment"
+                    placeholder="Write a comment..."
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    className="flex-1 border border-input rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
-                ) : (
-                  <Image
-                    src={selectedPhoto.url}
-                    alt={`Photo by ${selectedPhoto.name}`}
-                    fill
-                    className="object-contain"
-                    onError={() => toast.error('Failed to load photo')}
-                  />
-                )}
+                  <button
+                    type="submit"
+                    disabled={isPending}
+                    className="bg-primary text-white px-4 py-2 rounded-md text-sm hover:bg-primary/90"
+                  >
+                    {isPending ? 'Sending...' : 'Send'}
+                  </button>
+                </form>
               </div>
             </>
           )}
