@@ -154,7 +154,6 @@ export async function createComment({
 
   const cookieStore = cookies()
   const token = cookieStore.get('token')?.value
-  console.log('token', token)
 
   let userId: string = ''
   if (token) {
