@@ -7,36 +7,6 @@ import { jwtVerify } from 'jose'
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 
-export async function saveEmail(data: { name: string; email: string }) {
-  try {
-    // Check if email already exists
-    const existingEmail = await db.email.findUnique({
-      where: { email: data.email },
-    })
-
-    if (existingEmail) {
-      // If email exists, just update the name
-      const updated = await db.email.update({
-        where: { email: data.email },
-        data: { name: data.name },
-      })
-      return { success: true, email: updated }
-    } else {
-      // Otherwise create a new record
-      const email = await db.email.create({
-        data: {
-          name: data.name,
-          email: data.email,
-        },
-      })
-      return { success: true, email }
-    }
-  } catch (error) {
-    console.error('Error saving email:', error)
-    return { success: false, error: 'Failed to save email' }
-  }
-}
-
 export async function saveMessage(data: {
   content: string
   name: string
@@ -182,4 +152,25 @@ export async function createComment({
   // revalidatePath('/media')
 
   return comment
+}
+
+export async function getProfile() {
+  const cookieStore = cookies()
+  const token = cookieStore.get('token')?.value
+
+  let userId: string = ''
+  if (token) {
+    try {
+      const { payload } = await jwtVerify(token, getSecretKey())
+      userId = (payload as any).userId
+    } catch (e) {
+      throw new Error('Invalid token')
+    }
+  }
+
+  const user = await db.user.findUnique({ where: { id: userId } })
+  if (!user) {
+    throw new Error('User not found')
+  }
+  return user
 }

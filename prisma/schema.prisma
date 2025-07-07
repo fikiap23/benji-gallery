@@ -32,13 +32,6 @@ model Media {
   comment        Comment[]
 }
 
-model Email {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  email     String   @unique
-  name      String
-  createdAt DateTime @default(now())
-}
-
 model Message {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   content   String
