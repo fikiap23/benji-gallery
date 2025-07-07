@@ -33,11 +33,11 @@ export default function LoginPage() {
         return
       }
 
-      // Simpan token ke localStorage
-      localStorage.setItem('token', data.token)
+      // setelah login
+      document.cookie = `token=${data.token}; path=/; max-age=604800`
 
-      // Redirect ke halaman gallery
-      window.location.href = '/gallery'
+      // Redirect ke halaman utama
+      window.location.href = '/'
     } catch (err) {
       console.error('Login error:', err)
       toast('An error occurred during login.')
