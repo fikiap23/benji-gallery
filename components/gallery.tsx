@@ -31,6 +31,7 @@ export function Gallery({ media, currentUserId }: GalleryProps) {
   const [videoThumbnails, setVideoThumbnails] = useState<
     Record<string, string>
   >({})
+  const [openOptionsId, setOpenOptionsId] = useState<string | null>(null)
   const [comment, setComment] = useState('')
   const [isPending, startTransition] = useTransition()
   const hasLiked = selectedPhoto?.like?.some(
@@ -238,6 +239,50 @@ export function Gallery({ media, currentUserId }: GalleryProps) {
                   priority={false}
                 />
               )}
+
+              <div className="absolute top-2 right-2 text-white">
+                <div className="relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setOpenOptionsId((prev) =>
+                        prev === item.id ? null : item.id
+                      )
+                    }}
+                    className="bg-black/50 hover:bg-black/70 p-1 rounded-full"
+                  >
+                    <span className="text-lg font-bold">⋯</span>
+                  </button>
+
+                  {/* Menu Opsi */}
+                  {openOptionsId === item.id && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute right-0 mt-1 bg-white border text-sm rounded shadow z-10"
+                    >
+                      <button
+                        onClick={async () => {
+                          const confirmDelete = confirm(
+                            'Are you sure you want to delete this media?'
+                          )
+                          if (!confirmDelete) return
+
+                          const res = await deleteMedia(item.id)
+                          if (res.success) {
+                            toast.success('Media deleted')
+                            window.location.reload()
+                          } else {
+                            toast.error(res.error || 'Failed to delete media')
+                          }
+                        }}
+                        className="block w-full text-left px-4 py-2 hover:bg-red-100 text-red-600"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Tombol Like */}
               <button

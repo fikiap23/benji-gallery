@@ -121,6 +121,10 @@ export async function deleteMedia(
     if (!deletedFromUT)
       return { success: false, error: 'Failed to delete from UploadThing' }
 
+    await db.like.deleteMany({
+      where: { mediaId: id },
+    })
+
     await db.media.delete({ where: { id } })
 
     revalidatePath('/gallery')
