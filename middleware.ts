@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
+import { jwtVerify } from 'jose'
 
-const JWT_SECRET = process.env.JWT_SECRET as string
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
 
-export function middleware(req: NextRequest) {
+// Encode secret ke format Uint8Array
+function getSecretKey() {
+  return new TextEncoder().encode(JWT_SECRET)
+}
+
+export async function middleware(req: NextRequest) {
   const token = req.cookies.get('token')?.value
   const { pathname } = req.nextUrl
 
@@ -13,20 +18,20 @@ export function middleware(req: NextRequest) {
   )
 
   if (isProtected) {
-    // Kalau tidak ada token → redirect ke login
     if (!token) {
       return NextResponse.redirect(new URL('/login', req.url))
     }
 
     try {
-      // Verify token
-      jwt.verify(token, JWT_SECRET)
+      // Verifikasi token dengan jose
+      await jwtVerify(token, getSecretKey())
 
       return NextResponse.next()
     } catch (err) {
-      const response = NextResponse.redirect(new URL('/login', req.url))
-      response.cookies.set('token', '', { maxAge: 0 }) // hapus token
-      return response
+      console.error('JWT verification failed:', err)
+      const res = NextResponse.redirect(new URL('/login', req.url))
+      res.cookies.set('token', '', { maxAge: 0 }) // hapus token
+      return res
     }
   }
 
