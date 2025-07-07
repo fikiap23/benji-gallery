@@ -52,6 +52,7 @@
     "express": "latest",
     "h3": "latest",
     "input-otp": "1.4.1",
+    "jose": "^6.0.11",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.454.0",
     "next": "14.2.16",
