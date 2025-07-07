@@ -36,6 +36,7 @@ export async function getMedia(
       where,
       include: {
         comment: true,
+        like: true,
       },
     })
 

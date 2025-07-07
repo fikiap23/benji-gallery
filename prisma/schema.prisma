@@ -15,6 +15,7 @@ model User {
   verified  Boolean   @default(false)
   createdAt DateTime  @default(now())
   comment   Comment[]
+  like      Like[]
 }
 
 model Media {
@@ -26,10 +27,10 @@ model Media {
   thumbnail      String?
   size           Int?
   duration       Int?
-  likes          Int       @default(0)
   uploadthingKey String?
   createdAt      DateTime  @default(now())
   comment        Comment[]
+  like           Like[]    @relation("MediaLikes")
 }
 
 model Message {
@@ -48,4 +49,16 @@ model Comment {
   userId    String?  @db.ObjectId
   user      User?    @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
+}
+
+model Like {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  mediaId   String   @db.ObjectId
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  media Media @relation(fields: [mediaId], references: [id], name: "MediaLikes")
+
+  @@unique([userId, mediaId])
 }

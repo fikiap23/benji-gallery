@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from 'react'
 import Image from 'next/image'
-import { Camera, Heart, Play, User } from 'lucide-react'
+import { Camera, Heart, MessageCircle, Play, User } from 'lucide-react'
 import { createComment, deleteMedia, toggleLikePhoto } from '@/app/actions'
 import { cn, generateVideoThumbnail } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -15,15 +15,16 @@ import {
 } from '@/components/ui/dialog'
 import { VideoPlayer } from '@/components/video-player'
 import type { Media } from '@/lib/types'
+import { useRouter } from 'next/navigation'
 
 interface GalleryProps {
   media: Media[]
+  currentUserId: string
 }
 
-export function Gallery({ media }: GalleryProps) {
+export function Gallery({ media, currentUserId }: GalleryProps) {
+  const router = useRouter()
   const [selectedPhoto, setSelectedPhoto] = useState<Media | null>(null)
-  const [likedPhotos, setLikedPhotos] = useState<Record<string, number>>({})
-  const [userLikedPhotos, setUserLikedPhotos] = useState<Set<string>>(new Set())
   const [doubleTapTimer, setDoubleTapTimer] = useState<
     Record<string, NodeJS.Timeout | null>
   >({})
@@ -32,18 +33,13 @@ export function Gallery({ media }: GalleryProps) {
   >({})
   const [comment, setComment] = useState('')
   const [isPending, startTransition] = useTransition()
+  const hasLiked = selectedPhoto?.like?.some(
+    (like) => like.userId === currentUserId
+  )
 
   // Load user liked photos from localStorage
   useEffect(() => {
     try {
-      const likedPhotosJson = localStorage.getItem('userLikedPhotos')
-      if (likedPhotosJson) {
-        const likedPhotoIds = JSON.parse(likedPhotosJson)
-        if (Array.isArray(likedPhotoIds)) {
-          setUserLikedPhotos(new Set(likedPhotoIds))
-        }
-      }
-
       // Load cached thumbnails from localStorage
       const thumbnailsJson = localStorage.getItem('videoThumbnails')
       if (thumbnailsJson) {
@@ -95,85 +91,47 @@ export function Gallery({ media }: GalleryProps) {
   }
 
   const handleLikePhoto = async (photoId: string, event?: React.MouseEvent) => {
-    // Prevent event bubbling if event exists
-    if (event) {
-      event.stopPropagation()
-    }
-
-    // Check if user has already liked this photo
-    if (userLikedPhotos.has(photoId)) {
-      toast.info("You've already liked this photo!")
-      return
-    }
-
-    // Optimistic update for UI
-    setLikedPhotos((prev) => {
-      const mediaItem = media.find((p) => p.id === photoId)
-      const currentLikes = mediaItem?.likes || 0
-      const newLikes =
-        (prev[photoId] !== undefined ? prev[photoId] : currentLikes) + 1
-      return { ...prev, [photoId]: newLikes }
-    })
-
-    // Add to user liked photos in state
-    const newUserLikedPhotos = new Set(userLikedPhotos)
-    newUserLikedPhotos.add(photoId)
-    setUserLikedPhotos(newUserLikedPhotos)
-
-    // Save to localStorage
-    try {
-      localStorage.setItem(
-        'userLikedPhotos',
-        JSON.stringify([...newUserLikedPhotos])
-      )
-    } catch (error) {
-      console.error('Error saving liked photos to localStorage:', error)
-    }
+    if (event) event.stopPropagation()
 
     try {
       const result = await toggleLikePhoto(photoId)
-      if (result.error) {
-        throw new Error(result.error)
+
+      if (!result.success) {
+        toast.error(result.error || 'Failed to toggle like.')
+        return
       }
 
-      // Update with the real count from the server
-      setLikedPhotos((prev) => {
-        // Copy the previous state
-        const newLikes: Record<string, number> = { ...prev }
-        // Update with the new like count
-        newLikes[photoId] = result.likes
-        return newLikes
+      setSelectedPhoto((prev) => {
+        if (!prev) return prev
+
+        let updatedLikes = prev.like || []
+
+        if (result.isLiked) {
+          updatedLikes = [
+            ...updatedLikes,
+            {
+              id: 'temp-id',
+              userId: currentUserId!,
+              mediaId: photoId,
+              createdAt: new Date(),
+            },
+          ]
+        } else {
+          updatedLikes = updatedLikes.filter(
+            (like) => like.userId !== currentUserId
+          )
+        }
+
+        return {
+          ...prev,
+          like: updatedLikes,
+        }
       })
+
+      router.refresh()
     } catch (error) {
-      console.error('Error liking photo:', error)
-      toast.error('Failed to like photo. Please try again.')
-
-      // Revert the optimistic update
-      setLikedPhotos((prev) => {
-        const newLikedPhotos: Record<string, number> = {}
-        // Copy all entries except the one to remove
-        Object.entries(prev).forEach(([key, value]) => {
-          if (key !== photoId) {
-            newLikedPhotos[key] = value
-          }
-        })
-        return newLikedPhotos
-      })
-
-      // Remove from user liked photos
-      const revertedUserLikedPhotos = new Set(userLikedPhotos)
-      revertedUserLikedPhotos.delete(photoId)
-      setUserLikedPhotos(revertedUserLikedPhotos)
-
-      // Update localStorage
-      try {
-        localStorage.setItem(
-          'userLikedPhotos',
-          JSON.stringify([...revertedUserLikedPhotos])
-        )
-      } catch (error) {
-        console.error('Error saving liked photos to localStorage:', error)
-      }
+      console.error('Error toggling like:', error)
+      toast.error('Something went wrong.')
     }
   }
 
@@ -184,11 +142,6 @@ export function Gallery({ media }: GalleryProps) {
 
     // Check if we have a timer for this photo (indicating a potential double tap)
     if (doubleTapTimer[photoId]) {
-      // This is a double tap, like the photo if not already liked
-      if (!userLikedPhotos.has(photoId)) {
-        handleLikePhoto(photoId, event)
-      }
-
       // Clear the timer
       clearTimeout(doubleTapTimer[photoId]!)
       setDoubleTapTimer((prev) => ({ ...prev, [photoId]: null }))
@@ -246,104 +199,103 @@ export function Gallery({ media }: GalleryProps) {
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {media.map((item) => (
-          <div
-            key={item.id}
-            className="relative aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer transition-all hover:scale-[1.02] group"
-            onClick={(e) => handlePhotoTap(item.id, e)}
-          >
-            {item.type === 'video' ? (
-              <div className="relative w-full h-full">
+        {media.map((item) => {
+          const hasLiked = item.like?.some(
+            (like) => like.userId === currentUserId
+          )
+          const likeCount = item.like?.length || 0
+          return (
+            <div
+              key={item.id}
+              className="relative aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer transition-all hover:scale-[1.02] group"
+              onClick={(e) => handlePhotoTap(item.id, e)}
+            >
+              {item.type === 'video' ? (
+                <div className="relative w-full h-full">
+                  <Image
+                    src={videoThumbnails[item.id] || item.thumbnail || item.url}
+                    alt={`Video by ${item.name}`}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    onError={() => handleImageError(item.id)}
+                    priority={false}
+                  />
+                  <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
+                    <div className="h-12 w-12 rounded-full bg-black/50 flex items-center justify-center">
+                      <Play className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                </div>
+              ) : (
                 <Image
-                  src={videoThumbnails[item.id] || item.thumbnail || item.url}
-                  alt={`Video by ${item.name}`}
+                  src={item.url}
+                  alt={`Photo by ${item.name}`}
                   fill
                   className="object-cover"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   onError={() => handleImageError(item.id)}
                   priority={false}
                 />
-                <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
-                  <div className="h-12 w-12 rounded-full bg-black/50 flex items-center justify-center">
-                    <Play className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <Image
-                src={item.url}
-                alt={`Photo by ${item.name}`}
-                fill
-                className="object-cover"
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                onError={() => handleImageError(item.id)}
-                priority={false}
-              />
-            )}
+              )}
 
-            {/* Tombol Like */}
-            <div className="absolute bottom-2 right-2">
+              {/* Tombol Like */}
               <button
                 onClick={(e) => handleLikePhoto(item.id, e)}
                 className={cn(
-                  'flex items-center gap-1 text-sm px-2 py-1 rounded-full bg-black/50 text-white',
-                  userLikedPhotos.has(item.id) && 'cursor-default'
+                  'flex items-center gap-1 text-sm px-2 py-1 rounded-full bg-black/50 text-white transition-all',
+                  'hover:bg-black/70 active:scale-95'
                 )}
-                aria-label={
-                  userLikedPhotos.has(item.id) ? 'Already liked' : 'Like photo'
-                }
-                disabled={userLikedPhotos.has(item.id)}
+                aria-label={hasLiked ? 'Unlike photo' : 'Like photo'}
               >
                 <Heart
                   className={cn(
                     'h-4 w-4 transition-colors',
-                    userLikedPhotos.has(item.id) ||
-                      (likedPhotos[item.id] || item.likes) > item.likes
-                      ? 'fill-red-500 text-red-500'
-                      : 'text-white'
+                    hasLiked ? 'fill-red-500 text-red-500' : 'text-white'
                   )}
                 />
-                <span>
-                  {likedPhotos[item.id] !== undefined
-                    ? likedPhotos[item.id]
-                    : item.likes}
-                </span>
+                <span>{likeCount}</span>
               </button>
-            </div>
 
-            {/* Tombol Delete */}
-            <div className="absolute bottom-2 left-2">
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation()
-                  const confirmDelete = confirm(
-                    'Are you sure you want to delete this media?'
-                  )
-                  if (!confirmDelete) return
+              {/* Tombol Like */}
+              <div className="absolute bottom-2 right-2">
+                <button
+                  onClick={(e) => handleLikePhoto(item.id, e)}
+                  className={cn(
+                    'flex items-center gap-1 text-sm px-2 py-1 rounded-full bg-black/50 text-white transition-all',
+                    'hover:bg-black/70 active:scale-95',
+                    hasLiked && 'cursor-default'
+                  )}
+                  aria-label={hasLiked ? 'Unlike photo' : 'Like photo'}
+                >
+                  <Heart
+                    className={cn(
+                      'h-4 w-4 transition-colors',
+                      hasLiked ? 'fill-red-500 text-red-500' : 'text-white'
+                    )}
+                  />
+                  <span>{likeCount}</span>
+                </button>
+              </div>
 
-                  const res = await deleteMedia(item.id)
-                  if (res.success) {
-                    toast.success('Media deleted')
-                    window.location.reload()
-                  } else {
-                    toast.error(res.error || 'Failed to delete media')
-                  }
-                }}
-                className="text-xs px-2 py-1 rounded-full bg-red-500 text-white hover:bg-red-600"
-              >
-                Delete
-              </button>
-            </div>
+              {/* Total Comments */}
+              <div className="absolute bottom-2 left-2">
+                <div className="flex items-center gap-1 text-white bg-black/50 px-2 py-1 text-sm rounded-full">
+                  <MessageCircle className="w-4 h-4" />
+                  <span>{item.comment?.length || 0}</span>
+                </div>
+              </div>
 
-            {/* Label nama */}
-            <div className="absolute top-2 left-2">
-              <div className="bg-black/50 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                <Camera className="h-3 w-3" />
-                <span>{item.name}</span>
+              {/* Label nama */}
+              <div className="absolute top-2 left-2">
+                <div className="bg-black/50 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                  <Camera className="h-3 w-3" />
+                  <span>{item.name}</span>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Modal Detail */}
@@ -398,26 +350,18 @@ export function Gallery({ media }: GalleryProps) {
                     onClick={() => handleLikePhoto(selectedPhoto.id)}
                     className={cn(
                       'flex items-center gap-2 text-sm font-medium transition-colors',
-                      userLikedPhotos.has(selectedPhoto.id) && 'cursor-default'
+                      hasLiked && 'cursor-default'
                     )}
-                    disabled={userLikedPhotos.has(selectedPhoto.id)}
                   >
                     <Heart
                       className={cn(
                         'h-5 w-5 transition-colors',
-                        userLikedPhotos.has(selectedPhoto.id) ||
-                          (likedPhotos[selectedPhoto.id] ||
-                            selectedPhoto.likes) > selectedPhoto.likes
+                        hasLiked
                           ? 'fill-red-500 text-red-500'
                           : 'text-muted-foreground'
                       )}
                     />
-                    <span>
-                      {likedPhotos[selectedPhoto.id] !== undefined
-                        ? likedPhotos[selectedPhoto.id]
-                        : selectedPhoto.likes}{' '}
-                      Likes
-                    </span>
+                    <span>{selectedPhoto?.like?.length || 0} Likes</span>
                   </button>
 
                   <span className="text-sm text-muted-foreground">

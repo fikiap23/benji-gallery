@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/lib/db'
-import { getSecretKey } from '@/lib/jwt'
+import { getCurrentUserId, getSecretKey } from '@/lib/jwt'
 import type { Message } from '@/lib/types'
 import { jwtVerify } from 'jose'
 import { revalidatePath } from 'next/cache'
@@ -31,27 +31,48 @@ export async function saveMessage(data: {
 /**
  * Toggle like status for a media item (photo or video)
  */
-export async function toggleLikePhoto(mediaId: string): Promise<{
-  success: boolean
-  likes: number
-  error?: string
-}> {
+export async function toggleLikePhoto(mediaId: string) {
+  const userId = await getCurrentUserId()
+  if (!userId)
+    return {
+      success: false,
+      likes: 0,
+      isLiked: false,
+      error: 'Not authenticated',
+    }
+
   try {
-    const updatedMedia = await db.media.update({
-      where: { id: mediaId },
-      data: {
-        likes: {
-          increment: 1,
-        },
-      },
+    const existingLike = await db.like.findFirst({
+      where: { userId, mediaId },
     })
 
-    revalidatePath('/gallery')
+    let isLiked: boolean
 
-    return { success: true, likes: updatedMedia.likes }
-  } catch (error) {
-    console.error('Error liking media:', error)
-    return { success: false, likes: 0, error: 'Failed to like media' }
+    if (existingLike) {
+      await db.like.delete({
+        where: { id: existingLike.id },
+      })
+      isLiked = false
+    } else {
+      await db.like.create({
+        data: { mediaId, userId },
+      })
+      isLiked = true
+    }
+
+    const likeCount = await db.like.count({
+      where: { mediaId },
+    })
+
+    return { success: true, likes: likeCount, isLiked }
+  } catch (err) {
+    console.error('Error in toggleLikePhoto:', err)
+    return {
+      success: false,
+      likes: 0,
+      isLiked: false,
+      error: 'Something went wrong',
+    }
   }
 }
 

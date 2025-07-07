@@ -1,4 +1,4 @@
-import { Comment } from '@prisma/client'
+import { Comment, Like } from '@prisma/client'
 
 export interface Media {
   id: string
@@ -9,7 +9,7 @@ export interface Media {
   thumbnail?: string
   size?: number
   duration?: number
-  likes: number
+  like: Like[]
   createdAt: Date
   comment?: Comment[]
 }

@@ -5,6 +5,7 @@ import { getMedia, type SortOption, type MediaTypeFilter } from '@/lib/media'
 import { Gallery } from '@/components/gallery'
 import { GallerySorter } from '@/components/gallery-sorter'
 import type { Media } from '@/lib/types'
+import { getCurrentUserId } from '@/lib/jwt'
 
 export default async function GalleryPage({
   searchParams,
@@ -14,6 +15,7 @@ export default async function GalleryPage({
     type?: MediaTypeFilter
   }
 }) {
+  const currentUserId = await getCurrentUserId()
   const sortBy = searchParams.sort || 'recent'
   const mediaType = searchParams.type || 'all'
 
@@ -56,7 +58,7 @@ export default async function GalleryPage({
         <div className="flex justify-end mb-6">
           <GallerySorter currentSort={sortBy} mediaType={mediaType} />
         </div>
-        <Gallery media={media} />
+        <Gallery media={media} currentUserId={currentUserId!} />
       </main>
 
       <footer className="bg-muted py-6">
