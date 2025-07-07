@@ -17,7 +17,7 @@ const playfair = Playfair_Display({
 })
 
 export const metadata: Metadata = {
-  title: 'Benji  - Benji Gallery',
+  title: "Benji  - Benji's Gallery",
   description: 'Share and view os from our special day',
   generator: 'v0.dev',
 }

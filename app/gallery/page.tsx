@@ -37,7 +37,7 @@ export default async function GalleryPage({
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-serif">Benji Gallery</h1>
+              <h1 className="text-2xl font-serif">Benji's Gallery</h1>
               <p className="text-sm text-muted-foreground">
                 Memories from our special day
               </p>
@@ -61,7 +61,7 @@ export default async function GalleryPage({
 
       <footer className="bg-muted py-6">
         <div className="container mx-auto px-4 text-center">
-          <p className="text-muted-foreground">Benji — July 06, 2025</p>
+          <p className="text-muted-foreground">Benji — June 28th, 2023</p>
         </div>
       </footer>
     </div>
