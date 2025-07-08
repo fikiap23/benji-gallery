@@ -1,11 +1,39 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
+import { Camera, Heart, MessageCircle, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Camera, Heart, MessageCircle } from 'lucide-react'
 
 export default function Home() {
+  const router = useRouter()
+
+  const handleLogout = () => {
+    document.cookie = 'token=; Max-Age=0; path=/'
+    router.push('/login')
+  }
+
   return (
     <div className="min-h-screen bg-white text-gray-800 flex flex-col">
+      {/* Transparent Header */}
+      <header className="absolute top-0 left-0 w-full z-20">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <h1 className="text-lg font-bold text-white drop-shadow">
+            Benji's Journal
+          </h1>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-sm text-white hover:text-red-300 flex items-center gap-1"
+            onClick={handleLogout}
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </Button>
+        </div>
+      </header>
+
       {/* Hero Section */}
       <section className="relative w-full h-[75vh] flex items-center justify-center overflow-hidden">
         <Image
@@ -58,7 +86,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-white text-center py-6 border-t">
+      <footer className="bg-white text-center py-6 border-t mt-auto">
         <p className="text-xs text-muted-foreground">
           Made with love for Benji — Born June 28th, 2023
         </p>
