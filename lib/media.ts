@@ -1,6 +1,7 @@
 import { db } from '@/lib/db'
 import type { Media } from '@/lib/types'
 import { isMediaUrlValid } from '@/lib/utils'
+import { Prisma } from '@prisma/client'
 
 export type SortOption = 'recent' | 'oldest' | 'likes'
 export type MediaTypeFilter = 'all' | 'images' | 'videos'
@@ -14,29 +15,49 @@ export async function getMedia(
     cleanupDeleted?: boolean
     sortBy?: SortOption
     type?: MediaTypeFilter
+    search?: string
   } = {}
 ): Promise<Media[]> {
-  const { sortBy = 'recent', type = 'all' } = options
+  const { sortBy = 'recent', type = 'all', search } = options
 
   try {
-    // Determine the sort order
-    const orderBy = {
-      recent: { createdAt: 'desc' as const },
-      oldest: { createdAt: 'asc' as const },
-      likes: { likes: 'desc' as const },
-    }[sortBy]
-
-    // Prepare the where clause for filtering by type
-    const where =
+    // Prepare filtering by type
+    const typeFilter =
       type === 'all' ? {} : { type: type === 'images' ? 'image' : 'video' }
 
-    // Get all media from database using the Media model
+    const commentSearchFilter = search
+      ? {
+          comment: {
+            some: {
+              content: {
+                contains: search,
+                mode: Prisma.QueryMode.insensitive,
+              },
+            },
+          },
+        }
+      : {}
+
+    // Combine all filters
+    const where = {
+      ...typeFilter,
+      ...commentSearchFilter,
+    }
+
     const mediaItems = await db.media.findMany({
-      orderBy,
       where,
+      orderBy:
+        sortBy === 'recent'
+          ? { createdAt: 'desc' }
+          : sortBy === 'oldest'
+          ? { createdAt: 'asc' }
+          : sortBy === 'likes'
+          ? { like: { _count: 'desc' } }
+          : { createdAt: 'desc' },
       include: {
         comment: true,
         like: true,
+        _count: true,
       },
     })
 
