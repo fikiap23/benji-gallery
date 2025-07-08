@@ -22,10 +22,11 @@ export default function GalleryClient({
   const [media, setMedia] = useState<Media[]>([])
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const loader = useRef<HTMLDivElement | null>(null)
 
-  // Fetch media
   const loadMore = async () => {
+    setIsLoading(true)
     const newMedia = await getMedia({
       sortBy,
       type: mediaType,
@@ -33,28 +34,25 @@ export default function GalleryClient({
       page,
       pageSize: 10,
     })
-
     setMedia((prev) => (page === 1 ? newMedia : [...prev, ...newMedia]))
     setHasMore(newMedia.length > 0)
+    setIsLoading(false)
   }
 
-  // Trigger fetch on page change
   useEffect(() => {
     loadMore()
   }, [page, sortBy, mediaType, search])
 
-  // Reset when sort, type, or search changes
   useEffect(() => {
     setMedia([])
     setPage(1)
     setHasMore(true)
   }, [sortBy, mediaType, search])
 
-  // Infinite scroll trigger
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore) {
+        if (entries[0].isIntersecting && hasMore && !isLoading) {
           setPage((prev) => prev + 1)
         }
       },
@@ -70,7 +68,7 @@ export default function GalleryClient({
         observer.unobserve(loader.current)
       }
     }
-  }, [loader, hasMore])
+  }, [loader, hasMore, isLoading])
 
   return (
     <>
@@ -78,7 +76,16 @@ export default function GalleryClient({
         <SearchInput initialSearch={search} />
         <GallerySorter currentSort={sortBy} mediaType={mediaType} />
       </div>
-      <Gallery media={media} currentUserId={currentUserId} />
+      <Gallery
+        media={media}
+        currentUserId={currentUserId}
+        isLoading={isLoading && page === 1}
+      />
+      {isLoading && page > 1 && (
+        <div className="flex justify-center py-4">
+          <div className="w-6 h-6 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
       <div ref={loader} className="h-10" />
     </>
   )

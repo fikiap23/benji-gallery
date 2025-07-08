@@ -29,7 +29,11 @@ interface GalleryProps {
   currentUserId: string
 }
 
-export function Gallery({ media, currentUserId }: GalleryProps) {
+export function Gallery({
+  media,
+  currentUserId,
+  isLoading,
+}: GalleryProps & { isLoading?: boolean }) {
   const router = useRouter()
   const [selectedPhoto, setSelectedPhoto] = useState<Media | null>(null)
   const [doubleTapTimer, setDoubleTapTimer] = useState<
@@ -220,7 +224,20 @@ export function Gallery({ media, currentUserId }: GalleryProps) {
     })
   }
 
-  if (media.length === 0) {
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-16">
+        <div className="flex flex-col items-center gap-2">
+          <div className="w-6 h-6 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm text-muted-foreground">
+            Loading media...
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isLoading && media.length === 0) {
     return (
       <div className="text-center py-12">
         <p className="text-lg text-muted-foreground">
