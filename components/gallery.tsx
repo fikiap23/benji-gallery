@@ -382,7 +382,7 @@ export function Gallery({ media, currentUserId }: GalleryProps) {
                     alt={`Photo by ${selectedPhoto.name}`}
                     width={1200}
                     height={800}
-                    className="w-full h-auto max-h-[60vh] rounded-md object-cover"
+                    className="w-full h-auto max-h-[60vh] rounded-md object-contain"
                     onError={() => toast.error('Failed to load photo')}
                   />
                 )}
