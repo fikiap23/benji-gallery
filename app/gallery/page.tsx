@@ -1,33 +1,11 @@
 import Link from 'next/link'
 import { ChevronLeft, Upload } from 'lucide-react'
-import { getMedia, type SortOption, type MediaTypeFilter } from '@/lib/media'
 import { getCurrentUserId } from '@/lib/jwt'
 import { Button } from '@/components/ui/button'
-import { Gallery } from '@/components/gallery'
-import { GallerySorter } from '@/components/gallery-sorter'
-import type { Media } from '@/lib/types'
-import SearchInput from '@/components/gallery-search-input'
+import GalleryClient from '@/components/gallery-client'
 
-export default async function GalleryPage({
-  searchParams,
-}: {
-  searchParams: {
-    sort?: SortOption
-    type?: MediaTypeFilter
-    search?: string
-  }
-}) {
+export default async function GalleryPage() {
   const currentUserId = await getCurrentUserId()
-  const sortBy = searchParams.sort || 'recent'
-  const mediaType = searchParams.type || 'all'
-  const search = searchParams.search?.toLowerCase() || ''
-
-  let media: Media[] = []
-  try {
-    media = await getMedia({ sortBy, type: mediaType, search })
-  } catch (error) {
-    console.error('Error fetching media:', error)
-  }
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -57,11 +35,7 @@ export default async function GalleryPage({
       </header>
 
       <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <SearchInput initialSearch={search} />
-          <GallerySorter currentSort={sortBy} mediaType={mediaType} />
-        </div>
-        <Gallery media={media} currentUserId={currentUserId!} />
+        <GalleryClient currentUserId={currentUserId!} />
       </main>
 
       <footer className="bg-muted py-6">
