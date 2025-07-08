@@ -1,8 +1,8 @@
-"use client"
+'use client'
 
-import { useState, useRef, useEffect } from "react"
-import { Play, Pause, Volume2, VolumeX } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { useState, useRef, useEffect } from 'react'
+import { Play, Pause, Volume2, VolumeX, Maximize } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface VideoPlayerProps {
   src: string
@@ -11,7 +11,12 @@ interface VideoPlayerProps {
   autoPlay?: boolean
 }
 
-export function VideoPlayer({ src, className, poster, autoPlay = false }: VideoPlayerProps) {
+export function VideoPlayer({
+  src,
+  className,
+  poster,
+  autoPlay = false,
+}: VideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(autoPlay)
   const [isMuted, setIsMuted] = useState(false)
   const [showControls, setShowControls] = useState(false)
@@ -108,7 +113,7 @@ export function VideoPlayer({ src, className, poster, autoPlay = false }: VideoP
     const rect = volumeSliderRef.current.getBoundingClientRect()
     const position = (e.clientX - rect.left) / rect.width
     const newVolume = Math.max(0, Math.min(1, position))
-    
+
     videoRef.current.volume = newVolume
     setVolume(newVolume)
     setIsMuted(newVolume === 0)
@@ -127,7 +132,7 @@ export function VideoPlayer({ src, className, poster, autoPlay = false }: VideoP
 
   const handleSeekHover = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!seekBarRef.current) return
-    
+
     const rect = seekBarRef.current.getBoundingClientRect()
     const position = (e.clientX - rect.left) / rect.width
     setSeekHoverPosition(position)
@@ -135,18 +140,29 @@ export function VideoPlayer({ src, className, poster, autoPlay = false }: VideoP
 
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!videoRef.current || !seekBarRef.current) return
-    
+
     const rect = seekBarRef.current.getBoundingClientRect()
     const position = (e.clientX - rect.left) / rect.width
     const newTime = position * duration
-    
+
     videoRef.current.currentTime = newTime
     setCurrentTime(newTime)
   }
 
+  const handleFullScreen = () => {
+    if (videoRef.current) {
+      // Masuk full screen
+      if (videoRef.current.requestFullscreen) {
+        videoRef.current.requestFullscreen()
+      } else if ((videoRef.current as any).webkitEnterFullscreen) {
+        ;(videoRef.current as any).webkitEnterFullscreen() // Safari
+      }
+    }
+  }
+
   return (
-    <div 
-      className={cn("relative group", className)}
+    <div
+      className={`relative group ${className}`}
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => {
         setShowControls(false)
@@ -160,7 +176,7 @@ export function VideoPlayer({ src, className, poster, autoPlay = false }: VideoP
         ref={videoRef}
         src={src}
         poster={poster}
-        className="w-full h-full object-contain"
+        className="w-full h-full object-cover lg:object-contain"
         playsInline
         autoPlay={autoPlay}
         loop={false}
@@ -168,20 +184,22 @@ export function VideoPlayer({ src, className, poster, autoPlay = false }: VideoP
         onClick={(e) => e.stopPropagation()}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
+        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+        onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+        style={{ aspectRatio: '16 / 9' }}
       />
-      
+
       {/* Overlay controls */}
-      <div 
-        className={cn(
-          "absolute inset-0 bg-black/20 flex items-center justify-center transition-opacity", 
-          (isPlaying && !showControls) ? "opacity-0" : "opacity-100"
-        )}
+      <div
+        className={`absolute inset-0 bg-black/20 flex items-center justify-center transition-opacity ${
+          isPlaying && !showControls ? 'opacity-0' : 'opacity-100'
+        }`}
       >
-        <button 
+        <button
           type="button"
           onClick={togglePlay}
           className="p-3 bg-black/50 rounded-full text-white hover:bg-black/70 transition"
-          aria-label={isPlaying ? "Pause" : "Play"}
+          aria-label={isPlaying ? 'Pause' : 'Play'}
         >
           {isPlaying ? (
             <Pause className="h-8 w-8" />
@@ -190,17 +208,16 @@ export function VideoPlayer({ src, className, poster, autoPlay = false }: VideoP
           )}
         </button>
       </div>
-      
+
       {/* Bottom controls */}
-      <div 
-        className={cn(
-          "absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 flex flex-col gap-2 transition-opacity",
-          (isPlaying && !showControls) ? "opacity-0" : "opacity-100"
-        )}
+      <div
+        className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 flex flex-col gap-2 transition-opacity ${
+          isPlaying && !showControls ? 'opacity-0' : 'opacity-100'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Seeker bar */}
-        <div 
+        <div
           ref={seekBarRef}
           className="w-full h-1 bg-white/30 rounded cursor-pointer relative group"
           onClick={handleSeek}
@@ -208,20 +225,17 @@ export function VideoPlayer({ src, className, poster, autoPlay = false }: VideoP
           onMouseEnter={() => setIsSeekHovering(true)}
           onMouseLeave={() => setIsSeekHovering(false)}
         >
-          {/* Progress bar */}
-          <div 
+          <div
             className="absolute top-0 left-0 h-full bg-white rounded"
             style={{ width: `${(currentTime / duration) * 100}%` }}
           />
-          
-          {/* Hover preview */}
           {isSeekHovering && (
             <>
-              <div 
+              <div
                 className="absolute top-0 h-full w-0.5 bg-white/70"
                 style={{ left: `${seekHoverPosition * 100}%` }}
               />
-              <div 
+              <div
                 className="absolute -top-8 transform -translate-x-1/2 bg-black/80 text-white text-xs py-1 px-2 rounded"
                 style={{ left: `${seekHoverPosition * 100}%` }}
               >
@@ -230,7 +244,7 @@ export function VideoPlayer({ src, className, poster, autoPlay = false }: VideoP
             </>
           )}
         </div>
-        
+
         {/* Controls row */}
         <div className="flex items-center gap-4">
           {/* Volume controls */}
@@ -239,7 +253,7 @@ export function VideoPlayer({ src, className, poster, autoPlay = false }: VideoP
               type="button"
               onClick={toggleMute}
               className="p-1 text-white hover:text-gray-300 transition"
-              aria-label={isMuted ? "Unmute" : "Mute"}
+              aria-label={isMuted ? 'Unmute' : 'Mute'}
             >
               {isMuted || volume === 0 ? (
                 <VolumeX className="h-5 w-5" />
@@ -247,31 +261,39 @@ export function VideoPlayer({ src, className, poster, autoPlay = false }: VideoP
                 <Volume2 className="h-5 w-5" />
               )}
             </button>
-            
-            {/* Horizontal volume slider */}
-            <div 
+            <div
               ref={volumeSliderRef}
               className="w-20 h-1 bg-white/30 rounded cursor-pointer relative group"
               onClick={handleVolumeChange}
               onMouseDown={startVolumeDrag}
             >
-              <div 
+              <div
                 className="absolute top-0 left-0 h-full bg-white rounded"
                 style={{ width: `${volume * 100}%` }}
               />
-              <div 
+              <div
                 className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full -mt-px"
                 style={{ left: `calc(${volume * 100}% - 6px)` }}
               />
             </div>
           </div>
-          
+
           {/* Time display */}
           <div className="text-white text-sm">
             {formatTime(currentTime)} / {formatTime(duration)}
           </div>
+
+          {/* ✅ Fullscreen button */}
+          <button
+            type="button"
+            onClick={handleFullScreen}
+            className="p-1 text-white hover:text-gray-300 transition"
+            aria-label="Fullscreen"
+          >
+            <Maximize className="h-5 w-5" />
+          </button>
         </div>
       </div>
     </div>
   )
-} 
+}
