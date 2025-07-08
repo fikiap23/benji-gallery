@@ -2,7 +2,14 @@
 
 import { useState, useEffect, useTransition } from 'react'
 import Image from 'next/image'
-import { Camera, Heart, MessageCircle, Play, User } from 'lucide-react'
+import {
+  Camera,
+  Download,
+  Heart,
+  MessageCircle,
+  Play,
+  User,
+} from 'lucide-react'
 import { createComment, deleteMedia, toggleLikePhoto } from '@/app/actions'
 import { cn, generateVideoThumbnail } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -34,9 +41,35 @@ export function Gallery({ media, currentUserId }: GalleryProps) {
   const [openOptionsId, setOpenOptionsId] = useState<string | null>(null)
   const [comment, setComment] = useState('')
   const [isPending, startTransition] = useTransition()
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
+
   const hasLiked = selectedPhoto?.like?.some(
     (like) => like.userId === currentUserId
   )
+  const handleDownload = async (
+    url: string,
+    id: string,
+    type: 'image' | 'video'
+  ) => {
+    try {
+      setDownloadingId(id)
+      const res = await fetch(url)
+      const blob = await res.blob()
+      const ext = type === 'video' ? 'mp4' : 'jpg'
+      const blobUrl = URL.createObjectURL(blob)
+
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.download = `media-${id}.${ext}`
+      a.click()
+
+      URL.revokeObjectURL(blobUrl)
+    } catch (err) {
+      console.error('Download failed:', err)
+    } finally {
+      setDownloadingId(null)
+    }
+  }
 
   // Load user liked photos from localStorage
   useEffect(() => {
@@ -258,8 +291,36 @@ export function Gallery({ media, currentUserId }: GalleryProps) {
                   {openOptionsId === item.id && (
                     <div
                       onClick={(e) => e.stopPropagation()}
-                      className="absolute right-0 mt-1 bg-white border text-sm rounded shadow z-10"
+                      className="absolute right-0 mt-1 bg-white border text-sm rounded shadow z-10 min-w-[140px]"
                     >
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (downloadingId !== item.id) {
+                            handleDownload(item.url, item.id, item.type)
+                          }
+                        }}
+                        disabled={downloadingId === item.id}
+                        className={cn(
+                          'flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-800',
+                          downloadingId === item.id &&
+                            'opacity-50 cursor-not-allowed'
+                        )}
+                      >
+                        {downloadingId === item.id ? (
+                          <>
+                            <span className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
+                            Downloading...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4 text-gray-500" />
+                            Download
+                          </>
+                        )}
+                      </button>
+
+                      {/* Delete Button */}
                       <button
                         onClick={async () => {
                           const confirmDelete = confirm(
